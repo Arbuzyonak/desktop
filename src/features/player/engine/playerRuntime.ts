@@ -6,6 +6,7 @@ import { linerDb, audioCache } from "@/shared/storage";
 import { isStandaloneAudioFile } from "@/shared/storage/audioFormat";
 import type { Track } from "@/shared/types";
 import { pitchShifter } from "./pitchShifter";
+import { isFlat } from "./eqMath";
 import { resolvePlaybackStream, type PlaybackStream } from "./streamResolver";
 import { downloadAudioBytes } from "@/shared/media/innertube";
 
@@ -65,7 +66,9 @@ export class PlayerRuntime {
         state.isPitchLinked !== prevState.isPitchLinked ||
         state.pitchSemitones !== prevState.pitchSemitones ||
         state.isReverbEnabled !== prevState.isReverbEnabled ||
-        state.reverbLevel !== prevState.reverbLevel
+        state.reverbLevel !== prevState.reverbLevel ||
+        state.eqEnabled !== prevState.eqEnabled ||
+        state.eqBands !== prevState.eqBands
       ) {
         const rate = state.playbackRate ?? 1;
         const preservesPitch = !state.isPitchLinked;
@@ -319,7 +322,12 @@ export class PlayerRuntime {
       const pitchSemitones = store.pitchSemitones ?? 0;
       const isReverbEnabled = store.isReverbEnabled ?? false;
       const reverbLevel = store.reverbLevel ?? 0.35;
-      const needsEffects = isReverbEnabled || (!isPitchLinked && Math.abs(pitchSemitones) >= 0.05);
+      const eqEnabled = store.eqEnabled ?? false;
+      const eqBands = store.eqBands ?? [];
+      const needsEffects =
+        isReverbEnabled ||
+        (!isPitchLinked && Math.abs(pitchSemitones) >= 0.05) ||
+        (eqEnabled && !isFlat(eqBands));
       if (!needsEffects && !pitchShifter.isAttached()) return;
       pitchShifter.attach(this.audio);
       pitchShifter.update({
@@ -327,6 +335,8 @@ export class PlayerRuntime {
         isPitchLinked,
         isReverbEnabled,
         reverbLevel,
+        eqEnabled,
+        eqBands,
       });
     } catch (err) {
       console.error("[PlayerRuntime] applyPlaybackRateAndPitch error:", err);
