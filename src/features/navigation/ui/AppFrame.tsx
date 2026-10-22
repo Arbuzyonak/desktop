@@ -33,6 +33,7 @@ import {
   useSearchPlaylists,
 } from "@/features/search/hooks";
 import { mediaUrl, toClientTrack, toMaxQualityAvatarUrl } from "@/shared/api";
+import type { CatalogSource, SearchSource } from "@/shared/contracts";
 import {
   FullscreenPlayer,
   playerEngine,
@@ -40,7 +41,12 @@ import {
   usePlayerStore,
 } from "@/features/player";
 import SearchResultsList from "@/features/search/ui/SearchResultsList";
-import { SearchHistoryList, useSearchHistoryStore } from "@/features/search";
+import {
+  queryHistoryId,
+  SearchHistoryList,
+  SearchSourceSelector,
+  useSearchHistoryStore,
+} from "@/features/search";
 import { useTranslation } from "@/languages";
 import { useTheme } from "next-themes";
 import {
@@ -86,6 +92,7 @@ export default function AppFrame({ children }: AppFrameProps) {
   const openSettings = useModalStore((state) => state.openSettings);
 
   const [searchQuery, setSearchQuery] = useState("");
+  const [activeSource, setActiveSource] = useState<SearchSource>("all");
   const [queuePopupOpen, setQueuePopupOpen] = useState(false);
   const [rightDrawerTab, setRightDrawerTabState] = useState<"queue" | "lyrics">(() => {
     if (typeof window === "undefined") return "queue";
@@ -295,10 +302,12 @@ export default function AppFrame({ children }: AppFrameProps) {
     loading: allLoading,
     hasLoaded: allHasLoaded,
     runNow: runAllSearchNow,
+    failedSources: allFailedSources,
   } = useSearchAll(searchQuery, {
     enabled: searchOpen && isAllSearchFilter,
     limit: 20,
     debounceMs: 320,
+    source: activeSource,
   });
 
   const {
@@ -306,10 +315,12 @@ export default function AppFrame({ children }: AppFrameProps) {
     loading: trackLoading,
     hasLoaded: trackHasLoaded,
     runNow: runTrackSearchNow,
+    failedSources: trackFailedSources,
   } = useSearchTracks(searchQuery, {
     enabled: searchOpen && isTrackSearchFilter,
     limit: 20,
     debounceMs: 320,
+    source: activeSource,
   });
 
   const {
@@ -317,10 +328,12 @@ export default function AppFrame({ children }: AppFrameProps) {
     loading: artistLoading,
     hasLoaded: artistHasLoaded,
     runNow: runArtistSearchNow,
+    failedSources: artistFailedSources,
   } = useSearchArtists(searchQuery, {
     enabled: searchOpen && isArtistSearchFilter,
     limit: 20,
     debounceMs: 320,
+    source: activeSource,
   });
 
   const {
@@ -328,10 +341,12 @@ export default function AppFrame({ children }: AppFrameProps) {
     loading: albumLoading,
     hasLoaded: albumHasLoaded,
     runNow: runAlbumSearchNow,
+    failedSources: albumFailedSources,
   } = useSearchAlbums(searchQuery, {
     enabled: searchOpen && isAlbumSearchFilter,
     limit: 20,
     debounceMs: 320,
+    source: activeSource,
   });
 
   const {
@@ -339,10 +354,12 @@ export default function AppFrame({ children }: AppFrameProps) {
     loading: playlistLoading,
     hasLoaded: playlistHasLoaded,
     runNow: runPlaylistSearchNow,
+    failedSources: playlistFailedSources,
   } = useSearchPlaylists(searchQuery, {
     enabled: searchOpen && isPlaylistSearchFilter,
     limit: 20,
     debounceMs: 320,
+    source: activeSource,
   });
 
   const searchResults = useMemo(() => {
@@ -472,6 +489,23 @@ export default function AppFrame({ children }: AppFrameProps) {
         : isAlbumSearchFilter
           ? albumHasLoaded
           : playlistHasLoaded;
+
+  const searchFailedSources: CatalogSource[] | undefined = isAllSearchFilter
+    ? allFailedSources
+    : isTrackSearchFilter
+      ? trackFailedSources
+      : isArtistSearchFilter
+        ? artistFailedSources
+        : isAlbumSearchFilter
+          ? albumFailedSources
+          : playlistFailedSources;
+  const partialWarning = searchFailedSources?.length
+    ? t("search.partial_results", {
+        sources: searchFailedSources
+          .map((source) => t(`search.sources.${source}`))
+          .join(", "),
+      })
+    : undefined;
 
   const isSearchEmpty =
     searchQuery.trim().length >= 2 &&
@@ -639,22 +673,24 @@ export default function AppFrame({ children }: AppFrameProps) {
   );
 
   const submitSearchQuery = useCallback(
-    (queryToSubmit: string) => {
+    (queryToSubmit: string, source: SearchSource = activeSource) => {
       const trimmed = queryToSubmit.trim();
       if (!trimmed) return;
       addHistoryItem({
-        id: `query:${trimmed.toLowerCase()}`,
+        id: queryHistoryId(trimmed, source),
         type: "query",
         title: trimmed,
+        source,
       });
     },
-    [addHistoryItem],
+    [activeSource, addHistoryItem],
   );
 
   const handleSelectHistoryQuery = useCallback(
-    (queryText: string) => {
+    (queryText: string, source: SearchSource) => {
+      setActiveSource(source);
       setSearchQuery(queryText);
-      submitSearchQuery(queryText);
+      submitSearchQuery(queryText, source);
       searchInputRef.current?.focus();
     },
     [submitSearchQuery],
@@ -934,7 +970,10 @@ export default function AppFrame({ children }: AppFrameProps) {
                   transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
                   className="w-[min(660px,calc(100vw-72px))] mt-[8px] max-h-[500px] h-[500px] rounded-[8px] pointer-events-auto flex flex-col overflow-hidden bg-bg-panel/95 border border-border-primary/50 backdrop-blur-2xl"
                 >
-                  <div className="flex gap-[6px] px-[14px] pt-[12px] pb-[6px] shrink-0 overflow-x-auto">
+                  <div className="shrink-0 px-[14px] pt-[10px] pb-[2px]">
+                    <SearchSourceSelector value={activeSource} onChange={setActiveSource} />
+                  </div>
+                  <div className="flex gap-[6px] px-[14px] pt-[5px] pb-[6px] shrink-0 overflow-x-auto">
                     {filterKeys.map((key) => {
                       const label = filterLabels[key];
                       const isActive = activeFilter === key;
@@ -1031,6 +1070,7 @@ export default function AppFrame({ children }: AppFrameProps) {
                               WebkitMaskImage: searchScrollMask,
                               maskImage: searchScrollMask,
                             }}
+                            partialWarning={partialWarning}
                           />
                         </motion.div>
                       ) : null}

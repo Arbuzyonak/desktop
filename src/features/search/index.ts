@@ -24,6 +24,7 @@ export {
 } from "./hooks/useSearchPlaylists";
 export {
   useSearchHistoryStore,
+  queryHistoryId,
   type SearchHistoryItem,
   type SearchHistoryItemType,
   type SearchHistoryState,
@@ -32,3 +33,11 @@ export {
   SearchHistoryList,
   type SearchHistoryListProps,
 } from "./ui/SearchHistoryList";
+export {
+  SearchSourceSelector,
+  type SearchSourceSelectorProps,
+} from "./ui/SearchSourceSelector";
+export {
+  SearchSourceBadge,
+  type SearchSourceBadgeProps,
+} from "./ui/SearchSourceBadge";

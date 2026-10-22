@@ -421,6 +421,13 @@
   },
   "search": {
     "placeholder": "Search tracks, artists, albums...",
+    "sources": {
+      "all": "All sources",
+      "youtube": "YouTube Music",
+      "soundcloud": "SoundCloud"
+    },
+    "partial_results": "Some sources are unavailable: {sources}",
+    "open_on_source": "Open on {source}",
     "all": "All",
     "songs": "Songs",
     "artists": "Artists",
