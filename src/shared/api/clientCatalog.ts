@@ -1,27 +1,20 @@
 import { innertubeCatalog } from "@/shared/media/innertube";
-import { isSoundCloudCatalogId, isSoundCloudUrl, resolveSoundCloudUrl, soundcloudCatalog } from "@/shared/media/soundcloud";
+import { isSoundCloudCatalogId, soundcloudCatalog } from "@/shared/media/soundcloud";
 import { isAbortError } from "@/shared/utils/abort";
 import { log } from "@/shared/utils/logger";
 import type {
   AlbumDetails,
   ArtistDetails,
-  CatalogSource,
   CatalogPlaylistDetails,
   RadioResponse,
-  SearchResponse,
   SearchResult,
+  SearchResponse,
+  SearchSource,
   SearchType,
-  SourcedSearchResult,
   Track,
   TrackDetails,
 } from "@/shared/contracts";
-
-function tagSearchResults(
-  items: SearchResult[],
-  source: CatalogSource,
-): SourcedSearchResult[] {
-  return items.map((item) => ({ ...item, source }));
-}
+import { searchCatalogs } from "./catalogSearch";
 
 export function isClientCatalogId(id: string): boolean {
   return !isSoundCloudCatalogId(id);
@@ -67,18 +60,14 @@ async function resolveSnapshot(id: string): Promise<Track | undefined> {
 export const clientCatalog = {
   resolveSnapshot,
 
-  async search(query: string, type: SearchType, server: () => Promise<SearchResponse>): Promise<SearchResponse> {
-    if (isSoundCloudUrl(query)) {
-      const items = await resolveSoundCloudUrl(query, type).catch(() => []);
-      return { items: tagSearchResults(items, "soundcloud") };
-    }
-    return preferClient(
-      "search",
-      async () => ({
-        items: tagSearchResults(await innertubeCatalog.search(query, type), "youtube"),
-      }),
-      server,
-    );
+  search(
+    query: string,
+    type: SearchType,
+    server: () => Promise<{ items: SearchResult[] }>,
+    source: SearchSource = "all",
+    signal?: AbortSignal,
+  ): Promise<SearchResponse> {
+    return searchCatalogs(query, type, source, server, signal);
   },
 
   getTrack(id: string, server: () => Promise<TrackDetails>): Promise<TrackDetails> {

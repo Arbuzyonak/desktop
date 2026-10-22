@@ -436,6 +436,9 @@ export function resolveApiErrorMessage(
 // ---- Types from @liner/contracts --------------------------------------------
 
 export type {
+  CatalogSource,
+  SearchSource,
+  SourcedSearchResult,
   SearchType,
   Cover,
   ApiCover,
@@ -447,7 +450,7 @@ export type {
   SearchArtistItem as ApiArtist,
   SearchAlbumItem as ApiAlbum,
   SearchPlaylistItem as ApiPlaylist,
-  SearchResult as ApiSearchItem,
+  SourcedSearchResult as ApiSearchItem,
   SearchResponse,
   ArtistAlbum as ApiArtistAlbum,
   ArtistRelease as ApiArtistRelease,
@@ -498,6 +501,8 @@ export type {
 } from "../contracts";
 
 import type {
+  SearchResult,
+  SearchSource,
   SearchType,
   SearchResponse,
   Track as ApiTrackBase,
@@ -615,9 +620,20 @@ export const api = {
     const params = new URLSearchParams({ period, limit: String(limit) });
     return request<LeaderboardResponse>(`/v1/leaderboards/global?${params}`);
   },
-  search(q: string, type: SearchType = "all"): Promise<SearchResponse> {
+  search(
+    q: string,
+    type: SearchType = "all",
+    source: SearchSource = "all",
+    signal?: AbortSignal,
+  ): Promise<SearchResponse> {
     const params = new URLSearchParams({ q, type });
-    return clientCatalog.search(q, type, () => request<SearchResponse>(`/v1/search?${params}`));
+    return clientCatalog.search(
+      q,
+      type,
+      () => request<{ items: SearchResult[] }>(`/v1/search?${params}`, { signal }),
+      source,
+      signal,
+    );
   },
 
   getTrack(id: string): Promise<ApiTrackDetails> {
