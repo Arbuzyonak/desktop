@@ -38,7 +38,7 @@ export function useSearchPlaylists(
       const res = await api.search(q, "playlist");
       if (requestId !== latestRequestIdRef.current) return;
       setPlaylists(
-        res.items.filter((it): it is ApiPlaylist => it.type === "playlist"),
+        res.items.filter((it) => it.type === "playlist"),
       );
       setError(null);
       setPartialWarning(undefined);

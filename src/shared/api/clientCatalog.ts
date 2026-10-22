@@ -5,13 +5,23 @@ import { log } from "@/shared/utils/logger";
 import type {
   AlbumDetails,
   ArtistDetails,
+  CatalogSource,
   CatalogPlaylistDetails,
   RadioResponse,
   SearchResponse,
+  SearchResult,
   SearchType,
+  SourcedSearchResult,
   Track,
   TrackDetails,
 } from "@/shared/contracts";
+
+function tagSearchResults(
+  items: SearchResult[],
+  source: CatalogSource,
+): SourcedSearchResult[] {
+  return items.map((item) => ({ ...item, source }));
+}
 
 export function isClientCatalogId(id: string): boolean {
   return !isSoundCloudCatalogId(id);
@@ -58,10 +68,15 @@ export const clientCatalog = {
   resolveSnapshot,
 
   async search(query: string, type: SearchType, server: () => Promise<SearchResponse>): Promise<SearchResponse> {
-    if (isSoundCloudUrl(query)) return { items: await resolveSoundCloudUrl(query, type).catch(() => []) };
+    if (isSoundCloudUrl(query)) {
+      const items = await resolveSoundCloudUrl(query, type).catch(() => []);
+      return { items: tagSearchResults(items, "soundcloud") };
+    }
     return preferClient(
       "search",
-      async () => ({ items: await innertubeCatalog.search(query, type) }),
+      async () => ({
+        items: tagSearchResults(await innertubeCatalog.search(query, type), "youtube"),
+      }),
       server,
     );
   },

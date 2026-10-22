@@ -38,7 +38,7 @@ export function useSearchArtists(
       const res = await api.search(q, "artist");
       if (requestId !== latestRequestIdRef.current) return;
       setArtists(
-        res.items.filter((it): it is ApiArtist => it.type === "artist"),
+        res.items.filter((it) => it.type === "artist"),
       );
       setError(null);
       setPartialWarning(undefined);

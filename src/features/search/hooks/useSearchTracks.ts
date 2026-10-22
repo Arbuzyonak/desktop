@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { api, type ApiTrack } from "@/shared/api";
+import { api } from "@/shared/api";
 import { toClientTrack } from "@/shared/api";
 import type { Track } from "@/shared/types";
 
@@ -41,9 +41,7 @@ export function useSearchTracks(
       if (requestId !== latestRequestIdRef.current) return;
       setTracks(
         res.items
-          .filter(
-            (it): it is ApiTrack & { type: "track" } => it.type === "track",
-          )
+          .filter((it) => it.type === "track")
           .map(toClientTrack),
       );
       setError(null);
