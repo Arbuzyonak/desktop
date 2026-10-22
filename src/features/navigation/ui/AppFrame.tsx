@@ -295,7 +295,6 @@ export default function AppFrame({ children }: AppFrameProps) {
     loading: allLoading,
     hasLoaded: allHasLoaded,
     runNow: runAllSearchNow,
-    partialWarning,
   } = useSearchAll(searchQuery, {
     enabled: searchOpen && isAllSearchFilter,
     limit: 20,
@@ -1032,7 +1031,6 @@ export default function AppFrame({ children }: AppFrameProps) {
                               WebkitMaskImage: searchScrollMask,
                               maskImage: searchScrollMask,
                             }}
-                            partialWarning={partialWarning}
                           />
                         </motion.div>
                       ) : null}
