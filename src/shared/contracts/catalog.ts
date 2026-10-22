@@ -42,14 +42,21 @@ export type SourcedSearchResult = SearchResult & {
   externalUrl?: string;
 };
 
+export type SourcedSearchArtist = SearchArtistItem &
+  Pick<SourcedSearchResult, 'source' | 'externalUrl'>;
+export type SourcedSearchAlbum = SearchAlbumItem &
+  Pick<SourcedSearchResult, 'source' | 'externalUrl'>;
+export type SourcedSearchPlaylist = SearchPlaylistItem &
+  Pick<SourcedSearchResult, 'source' | 'externalUrl'>;
+
 export type ApiSearchItem = SourcedSearchResult;
 export type SearchResponse = {
   items: SourcedSearchResult[];
   failedSources?: CatalogSource[];
 };
-export type ApiArtist = SearchArtistItem;
-export type ApiAlbum = SearchAlbumItem;
-export type ApiPlaylist = SearchPlaylistItem;
+export type ApiArtist = SourcedSearchArtist;
+export type ApiAlbum = SourcedSearchAlbum;
+export type ApiPlaylist = SourcedSearchPlaylist;
 
 export interface ArtistAlbum {
   id: string;

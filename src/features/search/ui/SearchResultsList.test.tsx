@@ -3,7 +3,7 @@ import React from "react";
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { SearchResultsList } from "./SearchResultsList";
+import { searchResultKey, SearchResultsList } from "./SearchResultsList";
 
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -34,6 +34,12 @@ describe("SearchResultsList source metadata", () => {
   afterEach(() => {
     act(() => root.unmount());
     container.remove();
+  });
+
+  it("uses source and result type to distinguish provider IDs", () => {
+    expect(searchResultKey({ id: "7", source: "youtube", _type: "track" }, 0)).not.toBe(
+      searchResultKey({ id: "7", source: "soundcloud", _type: "track" }, 1),
+    );
   });
 
   it("shows the provider badge and SoundCloud attribution in a result row", async () => {

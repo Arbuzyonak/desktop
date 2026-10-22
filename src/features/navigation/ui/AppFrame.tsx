@@ -41,6 +41,7 @@ import {
   usePlayerStore,
 } from "@/features/player";
 import SearchResultsList from "@/features/search/ui/SearchResultsList";
+import SearchResultsPanel from "@/features/search/ui/SearchResultsPanel";
 import {
   queryHistoryId,
   SearchHistoryList,
@@ -1021,7 +1022,7 @@ export default function AppFrame({ children }: AppFrameProps) {
                     })}
                   </div>
 
-                  <div className="relative flex-1 min-h-0 overflow-hidden">
+                  <SearchResultsPanel partialWarning={partialWarning}>
                     <AnimatePresence mode="wait">
                       {isSearchEmpty ? (
                         <motion.div
@@ -1070,12 +1071,11 @@ export default function AppFrame({ children }: AppFrameProps) {
                               WebkitMaskImage: searchScrollMask,
                               maskImage: searchScrollMask,
                             }}
-                            partialWarning={partialWarning}
                           />
                         </motion.div>
                       ) : null}
                     </AnimatePresence>
-                  </div>
+                  </SearchResultsPanel>
                 </motion.div>
               ) : historyItems.length > 0 ? (
                 <motion.div

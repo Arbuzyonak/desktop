@@ -154,4 +154,18 @@ describe("searchSoundCloud", () => {
       expect.objectContaining({ id: "sc:2" }),
     ]);
   });
+
+  it("drops non-HTTPS and non-SoundCloud external URLs", async () => {
+    installFetch({
+      "/search/tracks": [
+        track(1, { permalink_url: "http://soundcloud.com/u/insecure" }),
+        track(2, { permalink_url: "https://example.com/not-soundcloud" }),
+      ],
+    });
+
+    const results = await searchSoundCloud("weeknd", "track");
+
+    expect(results).toHaveLength(2);
+    expect(results.every((result) => result.externalUrl === undefined)).toBe(true);
+  });
 });

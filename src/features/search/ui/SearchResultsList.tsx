@@ -12,8 +12,12 @@ export interface SearchResultsListProps {
   onNavigateItem: (item: any) => void;
   onScroll?: () => void;
   maskStyle?: React.CSSProperties;
-  partialWarning?: string | null;
   scrollRef?: React.RefObject<HTMLDivElement | null>;
+}
+
+export function searchResultKey(item: any, index: number): string | number {
+  if (!item?.id) return index;
+  return `${item.source ?? "legacy"}:${item._type ?? item.type ?? "result"}:${item.id}`;
 }
 
 export const SearchResultsList = memo(function SearchResultsList({
@@ -24,7 +28,6 @@ export const SearchResultsList = memo(function SearchResultsList({
   onNavigateItem,
   onScroll,
   maskStyle,
-  partialWarning,
   scrollRef,
 }: SearchResultsListProps) {
   const { t } = useTranslation();
@@ -36,7 +39,7 @@ export const SearchResultsList = memo(function SearchResultsList({
     count: items.length,
     getScrollElement: () => containerRef.current,
     estimateSize: () => 64,
-    getItemKey: (index) => items[index]?.id || index,
+    getItemKey: (index) => searchResultKey(items[index], index),
     gap: 6,
     overscan: 5,
   });
@@ -129,11 +132,6 @@ export const SearchResultsList = memo(function SearchResultsList({
           );
         })}
       </div>
-      {partialWarning ? (
-        <div className="text-accent-tertiary text-[12px] px-[8px] py-[6px] mt-[6px]">
-          {partialWarning}
-        </div>
-      ) : null}
     </div>
   );
 });

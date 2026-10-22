@@ -29,20 +29,19 @@ export function useSearchAll(
 
   const latestRequestIdRef = useRef(0);
   const activeControllerRef = useRef<AbortController | null>(null);
-  const lastFetchedKeyRef = useRef("");
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trimmed = query.trim();
   const searchKey = `${source}\u0000${trimmed}`;
   const shouldRunSearch = options.enabled && trimmed.length >= 2;
 
   const runRequest = useCallback(
-    async (requestId: number, q: string, key: string, controller: AbortController) => {
+    async (requestId: number, q: string, controller: AbortController) => {
       setLoading(true);
       try {
         const res = await api.search(q, "all", source, controller.signal);
         if (requestId !== latestRequestIdRef.current) return;
         setItems(res.items);
         setFailedSources(res.failedSources);
-        lastFetchedKeyRef.current = key;
         setHasLoaded(true);
       } catch (error) {
         if (controller.signal.aborted || isAbortError(error)) return;
@@ -59,57 +58,57 @@ export function useSearchAll(
   );
 
   useEffect(() => {
-    if (trimmed.length < 2) {
-      latestRequestIdRef.current += 1;
-      activeControllerRef.current?.abort();
-      activeControllerRef.current = null;
-      setItems([]);
-      setHasLoaded(false);
-      setLoading(false);
-      setFailedSources(undefined);
-      lastFetchedKeyRef.current = "";
-      return;
+    activeControllerRef.current?.abort();
+    activeControllerRef.current = null;
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
-    if (!options.enabled) return;
-
-    if (lastFetchedKeyRef.current === searchKey && items.length > 0) {
+    const requestId = ++latestRequestIdRef.current;
+    setItems([]);
+    setHasLoaded(false);
+    setFailedSources(undefined);
+    if (!shouldRunSearch) {
       setLoading(false);
-      setHasLoaded(true);
       return;
     }
 
     setLoading(true);
-    setFailedSources(undefined);
-    const requestId = ++latestRequestIdRef.current;
-    let controller: AbortController | undefined;
     const timer = setTimeout(() => {
-      if (lastFetchedKeyRef.current === searchKey && items.length > 0) {
-        setLoading(false);
-        setHasLoaded(true);
-        return;
-      }
-      controller = new AbortController();
+      debounceTimerRef.current = null;
+      const controller = new AbortController();
       activeControllerRef.current = controller;
-      void runRequest(requestId, trimmed, searchKey, controller);
+      void runRequest(requestId, trimmed, controller);
     }, options.debounceMs ?? 320);
+    debounceTimerRef.current = timer;
 
     return () => {
-      clearTimeout(timer);
-      controller?.abort();
-      if (activeControllerRef.current === controller) activeControllerRef.current = null;
+      if (debounceTimerRef.current === timer) {
+        clearTimeout(timer);
+        debounceTimerRef.current = null;
+      }
+      activeControllerRef.current?.abort();
+      activeControllerRef.current = null;
+      latestRequestIdRef.current += 1;
     };
-  }, [items.length, options.debounceMs, options.enabled, runRequest, searchKey, trimmed]);
+  }, [options.debounceMs, runRequest, searchKey, shouldRunSearch, trimmed]);
 
   const runNow = useCallback(() => {
     if (!shouldRunSearch) return;
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
     activeControllerRef.current?.abort();
     const requestId = ++latestRequestIdRef.current;
     const controller = new AbortController();
     activeControllerRef.current = controller;
+    setItems([]);
+    setHasLoaded(false);
     setFailedSources(undefined);
-    void runRequest(requestId, trimmed, searchKey, controller);
-  }, [runRequest, searchKey, shouldRunSearch, trimmed]);
+    void runRequest(requestId, trimmed, controller);
+  }, [runRequest, shouldRunSearch, trimmed]);
 
   return { items, loading, hasLoaded, failedSources, runNow };
 }

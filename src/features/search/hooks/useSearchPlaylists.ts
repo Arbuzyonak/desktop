@@ -31,12 +31,12 @@ export function useSearchPlaylists(
 
   const latestRequestIdRef = useRef(0);
   const activeControllerRef = useRef<AbortController | null>(null);
-  const lastFetchedKeyRef = useRef("");
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const trimmed = query.trim();
   const searchKey = `${source}\u0000${trimmed}`;
   const shouldRunSearch = enabled && trimmed.length >= 2;
 
-  const runRequest = useCallback(async (requestId: number, q: string, key: string, controller: AbortController) => {
+  const runRequest = useCallback(async (requestId: number, q: string, controller: AbortController) => {
     setLoading(true);
     try {
       const res = await api.search(q, "playlist", source, controller.signal);
@@ -46,7 +46,6 @@ export function useSearchPlaylists(
       );
       setError(null);
       setFailedSources(res.failedSources);
-      lastFetchedKeyRef.current = key;
       setHasLoaded(true);
     } catch (err) {
       if (controller.signal.aborted || isAbortError(err)) return;
@@ -62,58 +61,59 @@ export function useSearchPlaylists(
   }, [source]);
 
   useEffect(() => {
-    if (trimmed.length < 2) {
-      latestRequestIdRef.current += 1;
-      activeControllerRef.current?.abort();
-      activeControllerRef.current = null;
-      setPlaylists([]);
-      setHasLoaded(false);
-      setLoading(false);
-      setError(null);
-      setFailedSources(undefined);
-      lastFetchedKeyRef.current = "";
-      return;
+    activeControllerRef.current?.abort();
+    activeControllerRef.current = null;
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
     }
 
-    if (!enabled) return;
-
-    if (lastFetchedKeyRef.current === searchKey && playlists.length > 0) {
+    const requestId = ++latestRequestIdRef.current;
+    setPlaylists([]);
+    setHasLoaded(false);
+    setError(null);
+    setFailedSources(undefined);
+    if (!shouldRunSearch) {
       setLoading(false);
-      setHasLoaded(true);
       return;
     }
 
     setLoading(true);
-    setFailedSources(undefined);
-    const requestId = ++latestRequestIdRef.current;
-    let controller: AbortController | undefined;
     const timer = setTimeout(() => {
-      if (lastFetchedKeyRef.current === searchKey && playlists.length > 0) {
-        setLoading(false);
-        setHasLoaded(true);
-        return;
-      }
-      controller = new AbortController();
+      debounceTimerRef.current = null;
+      const controller = new AbortController();
       activeControllerRef.current = controller;
-      void runRequest(requestId, trimmed, searchKey, controller);
+      void runRequest(requestId, trimmed, controller);
     }, debounceMs);
+    debounceTimerRef.current = timer;
 
     return () => {
-      clearTimeout(timer);
-      controller?.abort();
-      if (activeControllerRef.current === controller) activeControllerRef.current = null;
+      if (debounceTimerRef.current === timer) {
+        clearTimeout(timer);
+        debounceTimerRef.current = null;
+      }
+      activeControllerRef.current?.abort();
+      activeControllerRef.current = null;
+      latestRequestIdRef.current += 1;
     };
-  }, [debounceMs, enabled, playlists.length, runRequest, searchKey, trimmed]);
+  }, [debounceMs, runRequest, searchKey, shouldRunSearch, trimmed]);
 
   const runNow = useCallback(() => {
     if (!shouldRunSearch) return;
+    if (debounceTimerRef.current !== null) {
+      clearTimeout(debounceTimerRef.current);
+      debounceTimerRef.current = null;
+    }
     activeControllerRef.current?.abort();
     const requestId = ++latestRequestIdRef.current;
     const controller = new AbortController();
     activeControllerRef.current = controller;
+    setPlaylists([]);
+    setHasLoaded(false);
+    setError(null);
     setFailedSources(undefined);
-    void runRequest(requestId, trimmed, searchKey, controller);
-  }, [runRequest, searchKey, shouldRunSearch, trimmed]);
+    void runRequest(requestId, trimmed, controller);
+  }, [runRequest, shouldRunSearch, trimmed]);
 
   return { playlists, loading, hasLoaded, error, failedSources, runNow };
 }

@@ -7,6 +7,7 @@ import type {
 } from "@/shared/contracts";
 import { asArray, asRecord, type JsonRecord, numberValue, trimmedString } from "@/shared/utils/json";
 import { soundCloudPlaylistId, soundCloudTrackId, soundCloudUserId } from "./soundcloudIds";
+import { safeSoundCloudExternalUrl } from "./soundcloudExternalUrl";
 
 const ARTWORK_SIZE = 500;
 const ARTWORK_VARIANT = /-(?:large|t\d+x\d+|crop|original)(?=\.[a-z]+$)/i;
@@ -53,7 +54,7 @@ export function mapSoundCloudCatalogTrack(rawTrack: unknown): ApiTrack | null {
 }
 
 function soundCloudExternalUrl(record: JsonRecord): string | undefined {
-  return trimmedString(record.permalink_url);
+  return safeSoundCloudExternalUrl(record.permalink_url);
 }
 
 export function mapSoundCloudSearchTrack(rawTrack: unknown): SourcedSearchResult | null {

@@ -25,6 +25,25 @@ function deferred<T>() {
   return { promise, resolve };
 }
 
+function Harness({
+  source,
+  debounceMs = 0,
+  onResult,
+}: {
+  source?: SearchSource;
+  debounceMs?: number;
+  onResult: (value: UseSearchAllResult) => void;
+}): ReactElement {
+  const value = useSearchAll("weeknd", {
+    enabled: true,
+    limit: 20,
+    debounceMs,
+    ...(source ? { source } : {}),
+  });
+  onResult(value);
+  return <div>{value.items.map((entry) => entry.id).join(",")}</div>;
+}
+
 describe("useSearchAll", () => {
   let container: HTMLDivElement;
   let root: Root;
@@ -45,18 +64,8 @@ describe("useSearchAll", () => {
   });
 
   async function render(source?: SearchSource): Promise<void> {
-    function Harness(): ReactElement {
-      result = useSearchAll("weeknd", {
-        enabled: true,
-        limit: 20,
-        debounceMs: 0,
-        ...(source ? { source } : {}),
-      });
-      return <div>{result.items.map((entry) => entry.id).join(",")}</div>;
-    }
-
     await act(async () => {
-      root.render(<Harness />);
+      root.render(<Harness source={source} onResult={(value) => { result = value; }} />);
     });
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -105,6 +114,53 @@ describe("useSearchAll", () => {
     await act(async () => youtube.resolve({ items: [item("yt-1", "youtube")] }));
 
     expect(result?.items.map((entry) => entry.id)).toEqual(["sc:1"]);
+  });
+
+  it("clears completed previous-source results while the new source loads", async () => {
+    const soundcloud = deferred<{ items: SourcedSearchResult[] }>();
+    vi.mocked(api.search)
+      .mockResolvedValueOnce({ items: [item("yt-1", "youtube")] })
+      .mockReturnValueOnce(soundcloud.promise);
+
+    await render("youtube");
+    expect(result?.items.map((entry) => entry.id)).toEqual(["yt-1"]);
+
+    await render("soundcloud");
+
+    expect(result?.items).toEqual([]);
+    expect(result?.hasLoaded).toBe(false);
+  });
+
+  it("aborts a runNow request when the source changes", async () => {
+    vi.mocked(api.search).mockResolvedValueOnce({ items: [] });
+    await render("youtube");
+
+    vi.mocked(api.search).mockReturnValueOnce(new Promise<never>(() => undefined));
+    act(() => result?.runNow());
+    const runNowSignal = vi.mocked(api.search).mock.calls[1]?.[3] as AbortSignal;
+
+    await render("soundcloud");
+
+    expect(runNowSignal.aborted).toBe(true);
+  });
+
+  it("cancels the pending debounce when runNow fires", async () => {
+    vi.mocked(api.search).mockResolvedValue({ items: [] });
+    await act(async () => {
+      root.render(
+        <Harness
+          source="youtube"
+          debounceMs={1_000}
+          onResult={(value) => { result = value; }}
+        />,
+      );
+    });
+
+    await act(async () => result?.runNow());
+    expect(api.search).toHaveBeenCalledTimes(1);
+
+    await act(async () => vi.runAllTimersAsync());
+    expect(api.search).toHaveBeenCalledTimes(1);
   });
 
   it("exposes failedSources from a partial all response", async () => {

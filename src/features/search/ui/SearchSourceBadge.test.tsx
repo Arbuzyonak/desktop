@@ -63,4 +63,18 @@ describe("SearchSourceBadge", () => {
 
     expect(container.innerHTML).toBe("");
   });
+
+  it("does not link an untrusted external URL", async () => {
+    await act(async () => {
+      root.render(
+        <SearchSourceBadge
+          source="soundcloud"
+          externalUrl="https://example.com/not-soundcloud"
+        />,
+      );
+    });
+
+    expect(container.textContent).toContain("SoundCloud");
+    expect(container.querySelector("a")).toBeNull();
+  });
 });
