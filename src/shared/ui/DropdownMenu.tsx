@@ -3,10 +3,12 @@ import {
   useEffect,
   useRef,
   useState,
+  Fragment,
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
+import { CheckLine } from "@mingcute/react";
 
 export interface DropdownMenuItem {
   id: string;
@@ -15,6 +17,9 @@ export interface DropdownMenuItem {
   onClick: () => void | Promise<void>;
   danger?: boolean;
   disabled?: boolean;
+  checked?: boolean;
+  closeOnSelect?: boolean;
+  separatorBefore?: boolean;
 }
 
 export interface DropdownMenuProps {
@@ -138,13 +143,19 @@ export default function DropdownMenu({
         >
           <div className="flex flex-col gap-0.5">
             {items.map((item) => (
-              <button
-                key={item.id}
+              <Fragment key={item.id}>
+                {item.separatorBefore && (
+                  <div role="separator" className="my-1 h-px bg-border-primary/70" />
+                )}
+                <button
                 type="button"
                 disabled={item.disabled}
+                aria-label={item.label}
+                role={item.checked === undefined ? "menuitem" : "menuitemcheckbox"}
+                aria-checked={item.checked === undefined ? undefined : item.checked}
                 onClick={async (e) => {
                   e.stopPropagation();
-                  setOpen(false);
+                  if (item.closeOnSelect !== false) setOpen(false);
                   await item.onClick();
                 }}
                 className={`group flex w-full items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-[13px] font-normal tracking-tight transition-colors border-none bg-transparent text-left cursor-pointer select-none outline-none ${
@@ -168,7 +179,17 @@ export default function DropdownMenu({
                   </span>
                 )}
                 <span className="truncate flex-1">{item.label}</span>
-              </button>
+                {item.checked !== undefined && (
+                  <span
+                    data-dropdown-check="true"
+                    aria-hidden="true"
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center transition-opacity ${item.checked ? "opacity-100" : "opacity-0"}`}
+                  >
+                    <CheckLine size={14} />
+                  </span>
+                )}
+                </button>
+              </Fragment>
             ))}
           </div>
         </motion.div>

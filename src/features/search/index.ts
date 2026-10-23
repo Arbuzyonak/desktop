@@ -40,6 +40,9 @@ export {
   type SearchHistoryListProps,
 } from "./ui/SearchHistoryList";
 export {
+  SearchSourceHub,
+} from "./ui/SearchSourceHub";
+export {
   SearchSourceSelector,
   type SearchSourceSelectorProps,
 } from "./ui/SearchSourceSelector";
