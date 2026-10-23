@@ -43,9 +43,10 @@ export {
   SearchSourceHub,
 } from "./ui/SearchSourceHub";
 export {
-  SearchSourceSelector,
-  type SearchSourceSelectorProps,
-} from "./ui/SearchSourceSelector";
+  SearchFilterBar,
+  type SearchFilterBarProps,
+  type SearchFilterKey,
+} from "./ui/SearchFilterBar";
 export {
   SearchSourceBadge,
   type SearchSourceBadgeProps,

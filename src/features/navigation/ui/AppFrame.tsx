@@ -12,11 +12,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   Search3Line,
   CloseCircleFill,
-  GridFill,
-  Music2Fill,
-  User2Fill,
-  AlbumFill,
-  PlaylistFill,
 } from "@mingcute/react";
 import Sidebar from "./Sidebar";
 import WindowControls from "./WindowControls";
@@ -44,9 +39,12 @@ import SearchResultsList from "@/features/search/ui/SearchResultsList";
 import SearchResultsPanel from "@/features/search/ui/SearchResultsPanel";
 import {
   queryHistoryId,
+  effectiveSearchSource,
   SearchHistoryList,
-  SearchSourceSelector,
+  SearchFilterBar,
+  type SearchFilterKey,
   useSearchHistoryStore,
+  useSearchSourceStore,
 } from "@/features/search";
 import { useTranslation } from "@/languages";
 import { useTheme } from "next-themes";
@@ -93,7 +91,9 @@ export default function AppFrame({ children }: AppFrameProps) {
   const openSettings = useModalStore((state) => state.openSettings);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeSource, setActiveSource] = useState<SearchSource>("all");
+  const selectedSources = useSearchSourceStore((state) => state.selectedSources);
+  const selectSearchSource = useSearchSourceStore((state) => state.selectSearchSource);
+  const activeSource = effectiveSearchSource(selectedSources);
   const [queuePopupOpen, setQueuePopupOpen] = useState(false);
   const [rightDrawerTab, setRightDrawerTabState] = useState<"queue" | "lyrics">(() => {
     if (typeof window === "undefined") return "queue";
@@ -197,22 +197,6 @@ export default function AppFrame({ children }: AppFrameProps) {
   const sidebarRef = useRef<HTMLDivElement>(null);
   const searchScrollRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  type SearchFilterKey = "all" | "tracks" | "artists" | "albums" | "playlists";
-  const filterKeys: SearchFilterKey[] = [
-    "all",
-    "tracks",
-    "artists",
-    "albums",
-    "playlists",
-  ];
-  const filterLabels: Record<SearchFilterKey, string> = {
-    all: t("common.all"),
-    tracks: t("common.songs"),
-    artists: t("common.artists"),
-    albums: t("common.albums"),
-    playlists: t("common.playlists"),
-  };
 
   const [activeFilter, setActiveFilter] = useState<SearchFilterKey>("all");
   const isAllSearchFilter = activeFilter === "all";
@@ -689,12 +673,15 @@ export default function AppFrame({ children }: AppFrameProps) {
 
   const handleSelectHistoryQuery = useCallback(
     (queryText: string, source: SearchSource) => {
-      setActiveSource(source);
+      selectSearchSource(source);
+      const selectedSource = effectiveSearchSource(
+        useSearchSourceStore.getState().selectedSources,
+      );
       setSearchQuery(queryText);
-      submitSearchQuery(queryText, source);
+      submitSearchQuery(queryText, selectedSource);
       searchInputRef.current?.focus();
     },
-    [submitSearchQuery],
+    [selectSearchSource, submitSearchQuery],
   );
 
   const { resolvedTheme } = useTheme();
@@ -971,56 +958,7 @@ export default function AppFrame({ children }: AppFrameProps) {
                   transition={{ duration: 0.1, ease: [0.16, 1, 0.3, 1] }}
                   className="w-[min(660px,calc(100vw-72px))] mt-[8px] max-h-[500px] h-[500px] rounded-[8px] pointer-events-auto flex flex-col overflow-hidden bg-bg-panel/95 border border-border-primary/50 backdrop-blur-2xl"
                 >
-                  <div className="shrink-0 px-[14px] pt-[10px] pb-[2px]">
-                    <SearchSourceSelector value={activeSource} onChange={setActiveSource} />
-                  </div>
-                  <div className="flex gap-[6px] px-[14px] pt-[5px] pb-[6px] shrink-0 overflow-x-auto">
-                    {filterKeys.map((key) => {
-                      const label = filterLabels[key];
-                      const isActive = activeFilter === key;
-                      let Icon = GridFill;
-                      if (key === "tracks") Icon = Music2Fill;
-                      else if (key === "artists") Icon = User2Fill;
-                      else if (key === "albums") Icon = AlbumFill;
-                      else if (key === "playlists") Icon = PlaylistFill;
-
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => setActiveFilter(key)}
-                          className={`
-                            relative flex items-center gap-[7px] px-[13px] py-[7px] rounded-[6px] text-[13.5px] font-normal transition-colors border-none bg-transparent cursor-pointer select-none shrink-0
-                            ${
-                              isActive
-                                ? "text-text-primary font-medium"
-                                : "text-text-secondary hover:text-text-primary hover:bg-border-alpha-14"
-                            }
-                          `}
-                          style={{
-                            fontFamily: "var(--font-inter), sans-serif",
-                            lineHeight: "1.2",
-                          }}
-                        >
-                          {isActive && (
-                            <motion.div
-                              layoutId="activeFilterPill"
-                              className="absolute inset-0 rounded-[6px] bg-border-alpha-14 pointer-events-none z-0"
-                              transition={{
-                                type: "spring",
-                                stiffness: 450,
-                                damping: 35,
-                              }}
-                            />
-                          )}
-                          <span className="relative z-[1] flex items-center gap-[7px]">
-                            <Icon size={15} />
-                            <span>{label}</span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <SearchFilterBar activeFilter={activeFilter} onChange={setActiveFilter} />
 
                   <SearchResultsPanel partialWarning={partialWarning}>
                     <AnimatePresence mode="wait">
