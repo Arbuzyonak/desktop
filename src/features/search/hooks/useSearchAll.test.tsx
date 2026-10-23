@@ -26,16 +26,20 @@ function deferred<T>() {
 }
 
 function Harness({
+  query = "weeknd",
+  enabled = true,
   source,
   debounceMs = 0,
   onResult,
 }: {
+  query?: string;
+  enabled?: boolean;
   source?: SearchSource;
   debounceMs?: number;
   onResult: (value: UseSearchAllResult) => void;
 }): ReactElement {
-  const value = useSearchAll("weeknd", {
-    enabled: true,
+  const value = useSearchAll(query, {
+    enabled,
     limit: 20,
     debounceMs,
     ...(source ? { source } : {}),
@@ -63,9 +67,27 @@ describe("useSearchAll", () => {
     vi.useRealTimers();
   });
 
-  async function render(source?: SearchSource): Promise<void> {
+  async function render({
+    query = "weeknd",
+    enabled = true,
+    source,
+    debounceMs = 0,
+  }: {
+    query?: string;
+    enabled?: boolean;
+    source?: SearchSource;
+    debounceMs?: number;
+  } = {}): Promise<void> {
     await act(async () => {
-      root.render(<Harness source={source} onResult={(value) => { result = value; }} />);
+      root.render(
+        <Harness
+          query={query}
+          enabled={enabled}
+          source={source}
+          debounceMs={debounceMs}
+          onResult={(value) => { result = value; }}
+        />,
+      );
     });
     await act(async () => {
       await vi.runAllTimersAsync();
@@ -75,7 +97,7 @@ describe("useSearchAll", () => {
   it("passes the selected source and abort signal to api.search", async () => {
     vi.mocked(api.search).mockResolvedValue({ items: [] });
 
-    await render("youtube");
+    await render({ source: "youtube" });
 
     expect(api.search).toHaveBeenCalledWith("weeknd", "all", "youtube", expect.any(AbortSignal));
   });
@@ -83,8 +105,8 @@ describe("useSearchAll", () => {
   it("reruns the same query when the source changes", async () => {
     vi.mocked(api.search).mockResolvedValue({ items: [] });
 
-    await render("youtube");
-    await render("soundcloud");
+    await render({ source: "youtube" });
+    await render({ source: "soundcloud" });
 
     expect(api.search).toHaveBeenCalledTimes(2);
     expect(vi.mocked(api.search).mock.calls[1]?.[2]).toBe("soundcloud");
@@ -94,9 +116,9 @@ describe("useSearchAll", () => {
     const pending = new Promise<never>(() => undefined);
     vi.mocked(api.search).mockReturnValue(pending);
 
-    await render("youtube");
+    await render({ source: "youtube" });
     const firstSignal = vi.mocked(api.search).mock.calls[0]?.[3] as AbortSignal;
-    await render("soundcloud");
+    await render({ source: "soundcloud" });
 
     expect(firstSignal.aborted).toBe(true);
   });
@@ -108,8 +130,8 @@ describe("useSearchAll", () => {
       .mockReturnValueOnce(youtube.promise)
       .mockReturnValueOnce(soundcloud.promise);
 
-    await render("youtube");
-    await render("soundcloud");
+    await render({ source: "youtube" });
+    await render({ source: "soundcloud" });
     await act(async () => soundcloud.resolve({ items: [item("sc:1", "soundcloud")] }));
     await act(async () => youtube.resolve({ items: [item("yt-1", "youtube")] }));
 
@@ -122,24 +144,68 @@ describe("useSearchAll", () => {
       .mockResolvedValueOnce({ items: [item("yt-1", "youtube")] })
       .mockReturnValueOnce(soundcloud.promise);
 
-    await render("youtube");
+    await render({ source: "youtube" });
     expect(result?.items.map((entry) => entry.id)).toEqual(["yt-1"]);
 
-    await render("soundcloud");
+    await render({ source: "soundcloud" });
 
     expect(result?.items).toEqual([]);
     expect(result?.hasLoaded).toBe(false);
   });
 
+  it("preserves completed results while disabled", async () => {
+    vi.mocked(api.search).mockResolvedValue({ items: [item("yt-1", "youtube")] });
+
+    await render({ source: "youtube" });
+    await render({ source: "youtube", enabled: false });
+
+    expect(result?.items.map(({ id }) => id)).toEqual(["yt-1"]);
+    expect(result?.hasLoaded).toBe(true);
+  });
+
+  it("reuses completed results when the same key is re-enabled", async () => {
+    vi.mocked(api.search).mockResolvedValue({ items: [item("yt-1", "youtube")] });
+
+    await render({ source: "youtube" });
+    await render({ source: "youtube", enabled: false });
+    await render({ source: "youtube", enabled: true });
+
+    expect(result?.items.map(({ id }) => id)).toEqual(["yt-1"]);
+    expect(api.search).toHaveBeenCalledTimes(1);
+  });
+
+  it("clears completed results when the trimmed query changes", async () => {
+    const replacement = deferred<{ items: SourcedSearchResult[] }>();
+    vi.mocked(api.search)
+      .mockResolvedValueOnce({ items: [item("yt-1", "youtube")] })
+      .mockReturnValueOnce(replacement.promise);
+
+    await render({ query: "weeknd", source: "youtube" });
+    await render({ query: "  drake  ", source: "youtube" });
+
+    expect(result?.items).toEqual([]);
+    expect(result?.hasLoaded).toBe(false);
+  });
+
+  it("aborts an active request when disabled", async () => {
+    vi.mocked(api.search).mockReturnValue(new Promise<never>(() => undefined));
+
+    await render({ source: "youtube" });
+    const signal = vi.mocked(api.search).mock.calls[0]?.[3] as AbortSignal;
+    await render({ source: "youtube", enabled: false });
+
+    expect(signal.aborted).toBe(true);
+  });
+
   it("aborts a runNow request when the source changes", async () => {
     vi.mocked(api.search).mockResolvedValueOnce({ items: [] });
-    await render("youtube");
+    await render({ source: "youtube" });
 
     vi.mocked(api.search).mockReturnValueOnce(new Promise<never>(() => undefined));
     act(() => result?.runNow());
     const runNowSignal = vi.mocked(api.search).mock.calls[1]?.[3] as AbortSignal;
 
-    await render("soundcloud");
+    await render({ source: "soundcloud" });
 
     expect(runNowSignal.aborted).toBe(true);
   });
@@ -169,7 +235,7 @@ describe("useSearchAll", () => {
       failedSources: ["soundcloud"],
     });
 
-    await render("all");
+    await render({ source: "all" });
 
     expect(result?.failedSources).toEqual(["soundcloud"]);
   });

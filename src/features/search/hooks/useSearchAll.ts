@@ -30,12 +30,14 @@ export function useSearchAll(
   const latestRequestIdRef = useRef(0);
   const activeControllerRef = useRef<AbortController | null>(null);
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousSearchKeyRef = useRef<string | null>(null);
+  const completedSearchKeyRef = useRef<string | null>(null);
   const trimmed = query.trim();
   const searchKey = `${source}\u0000${trimmed}`;
   const shouldRunSearch = options.enabled && trimmed.length >= 2;
 
   const runRequest = useCallback(
-    async (requestId: number, q: string, controller: AbortController) => {
+    async (requestId: number, q: string, key: string, controller: AbortController) => {
       setLoading(true);
       try {
         const res = await api.search(q, "all", source, controller.signal);
@@ -43,12 +45,14 @@ export function useSearchAll(
         setItems(res.items);
         setFailedSources(res.failedSources);
         setHasLoaded(true);
+        completedSearchKeyRef.current = key;
       } catch (error) {
         if (controller.signal.aborted || isAbortError(error)) return;
         if (requestId !== latestRequestIdRef.current) return;
         setItems([]);
         setFailedSources(undefined);
         setHasLoaded(true);
+        completedSearchKeyRef.current = key;
       } finally {
         if (requestId === latestRequestIdRef.current) setLoading(false);
         if (activeControllerRef.current === controller) activeControllerRef.current = null;
@@ -66,10 +70,18 @@ export function useSearchAll(
     }
 
     const requestId = ++latestRequestIdRef.current;
-    setItems([]);
-    setHasLoaded(false);
-    setFailedSources(undefined);
+    const keyChanged = previousSearchKeyRef.current !== searchKey;
+    previousSearchKeyRef.current = searchKey;
+    if (keyChanged) {
+      setItems([]);
+      setHasLoaded(false);
+      setFailedSources(undefined);
+    }
     if (!shouldRunSearch) {
+      setLoading(false);
+      return;
+    }
+    if (completedSearchKeyRef.current === searchKey) {
       setLoading(false);
       return;
     }
@@ -79,7 +91,7 @@ export function useSearchAll(
       debounceTimerRef.current = null;
       const controller = new AbortController();
       activeControllerRef.current = controller;
-      void runRequest(requestId, trimmed, controller);
+      void runRequest(requestId, trimmed, searchKey, controller);
     }, options.debounceMs ?? 320);
     debounceTimerRef.current = timer;
 
@@ -107,8 +119,8 @@ export function useSearchAll(
     setItems([]);
     setHasLoaded(false);
     setFailedSources(undefined);
-    void runRequest(requestId, trimmed, controller);
-  }, [runRequest, shouldRunSearch, trimmed]);
+    void runRequest(requestId, trimmed, searchKey, controller);
+  }, [runRequest, searchKey, shouldRunSearch, trimmed]);
 
   return { items, loading, hasLoaded, failedSources, runNow };
 }
