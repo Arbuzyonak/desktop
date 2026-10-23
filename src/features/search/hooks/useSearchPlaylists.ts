@@ -76,6 +76,7 @@ export function useSearchPlaylists(
     const keyChanged = previousSearchKeyRef.current !== searchKey;
     previousSearchKeyRef.current = searchKey;
     if (keyChanged) {
+      completedSearchKeyRef.current = null;
       setPlaylists([]);
       setHasLoaded(false);
       setError(null);
@@ -117,6 +118,7 @@ export function useSearchPlaylists(
       debounceTimerRef.current = null;
     }
     activeControllerRef.current?.abort();
+    completedSearchKeyRef.current = null;
     const requestId = ++latestRequestIdRef.current;
     const controller = new AbortController();
     activeControllerRef.current = controller;

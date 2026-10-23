@@ -65,6 +65,26 @@ describe("SearchSourceBadge", () => {
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
+  it("does not bubble keyboard activation from a provider link to the row", async () => {
+    const onRowKeyDown = vi.fn();
+    await act(async () => {
+      root.render(
+        <div onKeyDown={onRowKeyDown}>
+          <SearchSourceBadge
+            source="soundcloud"
+            externalUrl="https://soundcloud.com/u/t"
+          />
+        </div>,
+      );
+    });
+
+    const link = container.querySelector('a[aria-label="Open on SoundCloud"]') as HTMLAnchorElement;
+    link.focus();
+    act(() => link.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true })));
+
+    expect(onRowKeyDown).not.toHaveBeenCalled();
+  });
+
   it("renders nothing for legacy results without a source", async () => {
     await act(async () => {
       root.render(<SearchSourceBadge />);

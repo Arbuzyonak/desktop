@@ -55,7 +55,7 @@ describe("useSearchAll", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     container = document.createElement("div");
     document.body.appendChild(container);
     root = createRoot(container);
@@ -195,6 +195,36 @@ describe("useSearchAll", () => {
     await render({ source: "youtube", enabled: false });
 
     expect(signal.aborted).toBe(true);
+  });
+
+  it("refetches after a forced refresh is aborted by disabling", async () => {
+    vi.mocked(api.search).mockResolvedValueOnce({ items: [item("yt-1", "youtube")] });
+    await render({ source: "youtube" });
+
+    vi.mocked(api.search).mockReturnValueOnce(new Promise<never>(() => undefined));
+    act(() => result?.runNow());
+    await render({ source: "youtube", enabled: false });
+
+    vi.mocked(api.search).mockResolvedValueOnce({ items: [item("yt-2", "youtube")] });
+    await render({ source: "youtube", enabled: true });
+
+    expect(api.search).toHaveBeenCalledTimes(3);
+    expect(result?.items.map(({ id }) => id)).toEqual(["yt-2"]);
+    expect(result?.hasLoaded).toBe(true);
+  });
+
+  it("refetches when a disabled key changes away and back after results were cleared", async () => {
+    vi.mocked(api.search)
+      .mockResolvedValueOnce({ items: [item("yt-1", "youtube")] })
+      .mockResolvedValueOnce({ items: [item("yt-2", "youtube")] });
+    await render({ query: "weeknd", source: "youtube" });
+
+    await render({ query: "drake", source: "youtube", enabled: false });
+    await render({ query: "weeknd", source: "youtube", enabled: false });
+    await render({ query: "weeknd", source: "youtube", enabled: true });
+
+    expect(api.search).toHaveBeenCalledTimes(2);
+    expect(result?.items.map(({ id }) => id)).toEqual(["yt-2"]);
   });
 
   it("aborts a runNow request when the source changes", async () => {

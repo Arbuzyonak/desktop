@@ -1,6 +1,7 @@
 import {
   useLayoutEffect,
   useEffect,
+  useCallback,
   useRef,
   useState,
   Fragment,
@@ -81,6 +82,35 @@ export default function DropdownMenu({
   const containerRef = useRef<HTMLDivElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
+  const focusTrigger = () => {
+    containerRef.current
+      ?.querySelector<HTMLElement>(
+        "button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      )
+      ?.focus();
+  };
+
+  const getEnabledMenuItems = () =>
+    Array.from(
+      menuRef.current?.querySelectorAll<HTMLElement>(
+        '[role="menuitem"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled])',
+      ) ?? [],
+    );
+
+  const setMenuElement = useCallback((node: HTMLDivElement | null) => {
+    menuRef.current = node;
+    if (!node) return;
+    const menuItems = Array.from(
+      node.querySelectorAll<HTMLElement>(
+        '[role="menuitem"]:not([disabled]), [role="menuitemcheckbox"]:not([disabled])',
+      ),
+    );
+    const initiallyFocused = menuItems.find(
+      (item) => item.getAttribute("aria-checked") === "true",
+    ) ?? menuItems[0];
+    initiallyFocused?.focus();
+  }, []);
+
   const [computedPos, setComputedPos] = useState<{
     x: number;
     y: number;
@@ -112,6 +142,7 @@ export default function DropdownMenu({
     };
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        focusTrigger();
         setOpen(false);
       }
     };
@@ -129,8 +160,9 @@ export default function DropdownMenu({
       {open && (
         <motion.div
           key="dropdown-menu"
-          ref={menuRef}
+          ref={setMenuElement}
           data-dropdown-menu="true"
+          role="menu"
           initial={{ opacity: 0, scale: 0.96, y: side === "top" ? 2 : -2 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.96, y: side === "top" ? 2 : -2 }}
@@ -140,6 +172,36 @@ export default function DropdownMenu({
           }`}
           style={isFixed ? fixedStyle : {}}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(event) => {
+            const menuItems = getEnabledMenuItems();
+            if (menuItems.length === 0) return;
+
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              focusTrigger();
+              setOpen(false);
+              return;
+            }
+
+            const currentIndex = menuItems.indexOf(document.activeElement as HTMLElement);
+            let nextIndex: number | undefined;
+            if (event.key === "ArrowDown") {
+              nextIndex = currentIndex < 0 ? 0 : (currentIndex + 1) % menuItems.length;
+            } else if (event.key === "ArrowUp") {
+              nextIndex = currentIndex <= 0 ? menuItems.length - 1 : currentIndex - 1;
+            } else if (event.key === "Home") {
+              nextIndex = 0;
+            } else if (event.key === "End") {
+              nextIndex = menuItems.length - 1;
+            }
+
+            if (nextIndex !== undefined) {
+              event.preventDefault();
+              event.stopPropagation();
+              menuItems[nextIndex]?.focus();
+            }
+          }}
         >
           <div className="flex flex-col gap-0.5">
             {items.map((item) => (
@@ -155,7 +217,10 @@ export default function DropdownMenu({
                 aria-checked={item.checked === undefined ? undefined : item.checked}
                 onClick={async (e) => {
                   e.stopPropagation();
-                  if (item.closeOnSelect !== false) setOpen(false);
+                  if (item.closeOnSelect !== false) {
+                    focusTrigger();
+                    setOpen(false);
+                  }
                   await item.onClick();
                 }}
                 className={`group flex w-full items-center gap-2.5 rounded-sm px-2.5 py-1.5 text-[13px] font-normal tracking-tight transition-colors border-none bg-transparent text-left cursor-pointer select-none outline-none ${

@@ -80,6 +80,7 @@ export function useSearchTracks(
     const keyChanged = previousSearchKeyRef.current !== searchKey;
     previousSearchKeyRef.current = searchKey;
     if (keyChanged) {
+      completedSearchKeyRef.current = null;
       setTracks([]);
       setHasLoaded(false);
       setError(null);
@@ -121,6 +122,7 @@ export function useSearchTracks(
       debounceTimerRef.current = null;
     }
     activeControllerRef.current?.abort();
+    completedSearchKeyRef.current = null;
     const requestId = ++latestRequestIdRef.current;
     const controller = new AbortController();
     activeControllerRef.current = controller;

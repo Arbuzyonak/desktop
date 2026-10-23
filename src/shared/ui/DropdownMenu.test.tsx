@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import React, { act } from "react";
+import { useState } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import DropdownMenu from "./DropdownMenu";
@@ -67,5 +68,43 @@ describe("DropdownMenu", () => {
 
     expect(onClick).toHaveBeenCalledTimes(1);
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
+  });
+
+  it("supports menu arrow navigation and restores trigger focus on Escape", async () => {
+    function KeyboardMenu() {
+      const [open, setOpen] = useState(false);
+      return (
+        <DropdownMenu
+          open={open}
+          onOpenChange={setOpen}
+          trigger={<button type="button">Open sources</button>}
+          items={[
+            { id: "youtube", label: "YouTube Music", checked: true, closeOnSelect: false, onClick: vi.fn() },
+            { id: "soundcloud", label: "SoundCloud", checked: false, closeOnSelect: false, onClick: vi.fn() },
+            { id: "soon", label: "Coming soon", onClick: vi.fn() },
+          ]}
+        />
+      );
+    }
+
+    await act(async () => root.render(<KeyboardMenu />));
+    const trigger = container.querySelector("button") as HTMLButtonElement;
+    await act(async () => trigger.click());
+
+    const menu = document.body.querySelector('[role="menu"]') as HTMLElement;
+    const youtube = document.body.querySelector('[aria-label="YouTube Music"]') as HTMLButtonElement;
+    const soundcloud = document.body.querySelector('[aria-label="SoundCloud"]') as HTMLButtonElement;
+    const comingSoon = document.body.querySelector('[aria-label="Coming soon"]') as HTMLButtonElement;
+    expect(document.activeElement).toBe(youtube);
+
+    await act(async () => youtube.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true })));
+    expect(document.activeElement).toBe(soundcloud);
+    await act(async () => soundcloud.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true })));
+    expect(document.activeElement).toBe(comingSoon);
+    await act(async () => comingSoon.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true })));
+    expect(document.activeElement).toBe(youtube);
+
+    await act(async () => menu.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true })));
+    expect(document.activeElement).toBe(trigger);
   });
 });

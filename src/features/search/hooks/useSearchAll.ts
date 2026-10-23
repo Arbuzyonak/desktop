@@ -73,6 +73,7 @@ export function useSearchAll(
     const keyChanged = previousSearchKeyRef.current !== searchKey;
     previousSearchKeyRef.current = searchKey;
     if (keyChanged) {
+      completedSearchKeyRef.current = null;
       setItems([]);
       setHasLoaded(false);
       setFailedSources(undefined);
@@ -113,6 +114,7 @@ export function useSearchAll(
       debounceTimerRef.current = null;
     }
     activeControllerRef.current?.abort();
+    completedSearchKeyRef.current = null;
     const requestId = ++latestRequestIdRef.current;
     const controller = new AbortController();
     activeControllerRef.current = controller;

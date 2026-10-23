@@ -55,6 +55,9 @@ export const SearchSourceBadge = memo(function SearchSourceBadge({
       data-prevent-drag
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") event.stopPropagation();
+      }}
       className={`${className} no-underline hover:bg-border-alpha-20 hover:text-text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-text-primary`}
     >
       {content}
