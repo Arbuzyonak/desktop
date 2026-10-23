@@ -1,5 +1,4 @@
 import { memo } from "react";
-import { ArrowRightUpLine } from "@mingcute/react";
 import { SiSoundcloud, SiYoutubemusic } from "react-icons/si";
 import type { CatalogSource } from "@/shared/contracts";
 import { safeSoundCloudExternalUrl } from "@/shared/media/soundcloud/soundcloudExternalUrl";
@@ -22,16 +21,28 @@ export const SearchSourceBadge = memo(function SearchSourceBadge({
   const safeExternalUrl = source === "soundcloud"
     ? safeSoundCloudExternalUrl(externalUrl)
     : undefined;
-  const content = (
-    <>
-      <Icon size={11} aria-hidden />
-      <span>{label}</span>
-      {safeExternalUrl ? <ArrowRightUpLine size={11} aria-hidden /> : null}
-    </>
-  );
-  const className = "inline-flex h-[20px] shrink-0 items-center gap-[4px] rounded-[5px] bg-border-alpha-14 px-[6px] text-[10.5px] font-medium leading-none text-text-tertiary transition-colors";
+  const content = <Icon size={13} aria-hidden />;
+  const sourceClass = source === "soundcloud"
+    ? "bg-[#ff5500]/15 text-[#ff5500] hover:bg-[#ff5500]/25"
+    : "bg-[#ff0033]/15 text-[#ff0033] hover:bg-[#ff0033]/25";
+  const className = `inline-flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full transition-colors ${sourceClass}`;
 
-  if (!safeExternalUrl) return <span className={className}>{content}</span>;
+  if (!safeExternalUrl) {
+    return (
+      <span
+        role="img"
+        aria-label={label}
+        title={label}
+        data-source-badge={source}
+        data-prevent-drag
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => event.stopPropagation()}
+        className={className}
+      >
+        {content}
+      </span>
+    );
+  }
 
   return (
     <a
@@ -40,6 +51,7 @@ export const SearchSourceBadge = memo(function SearchSourceBadge({
       rel="noopener noreferrer"
       aria-label={t("search.open_on_source", { source: label })}
       title={t("search.open_on_source", { source: label })}
+      data-source-badge={source}
       data-prevent-drag
       onPointerDown={(event) => event.stopPropagation()}
       onClick={(event) => event.stopPropagation()}

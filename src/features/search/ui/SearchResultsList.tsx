@@ -100,34 +100,29 @@ export const SearchResultsList = memo(function SearchResultsList({
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
-              <div className="relative">
-                <SongCardWithMenu
-                  id={it.id}
-                  title={it.title || it.name || ""}
-                  artistId={it.artistId ?? it.artist_id}
-                  artistList={it.artistList}
-                  artists={subtitle}
-                  coverUrl={it.coverUrl || it.imageUrl || ""}
-                  className={it.source ? "pr-[140px]" : undefined}
-                  explicit={it.explicit}
-                  imageShape={isArtist ? "circle" : "square"}
-                  duration={durationStr}
-                  durationMs={durationMs}
-                  searchType={it._type}
-                  totalTracks={it.totalTracks ?? it.total_tracks}
-                  onPlay={
-                    it._type === "track"
-                      ? () => onPlayFromSearch(it)
-                      : () => onNavigateItem(it)
-                  }
-                  onNavigate={() => onNavigateItem(it)}
-                />
-                {it.source ? (
-                  <div className="absolute right-[10px] bottom-[8px] z-[2]">
-                    <SearchSourceBadge source={it.source} externalUrl={it.externalUrl} />
-                  </div>
-                ) : null}
-              </div>
+              <SongCardWithMenu
+                id={it.id}
+                title={it.title || it.name || ""}
+                artistId={it.artistId ?? it.artist_id}
+                artistList={it.artistList}
+                artists={subtitle}
+                coverUrl={it.coverUrl || it.imageUrl || ""}
+                explicit={it.explicit}
+                imageShape={isArtist ? "circle" : "square"}
+                duration={durationStr}
+                durationMs={durationMs}
+                searchType={it._type}
+                totalTracks={it.totalTracks ?? it.total_tracks}
+                trailingControl={it.source ? (
+                  <SearchSourceBadge source={it.source} externalUrl={it.externalUrl} />
+                ) : undefined}
+                onPlay={
+                  it._type === "track"
+                    ? () => onPlayFromSearch(it)
+                    : () => onNavigateItem(it)
+                }
+                onNavigate={() => onNavigateItem(it)}
+              />
             </div>
           );
         })}

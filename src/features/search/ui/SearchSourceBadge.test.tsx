@@ -22,7 +22,7 @@ describe("SearchSourceBadge", () => {
     container.remove();
   });
 
-  it("renders readable YouTube and SoundCloud names", async () => {
+  it("renders compact provider-colored circles without provider-name text", async () => {
     await act(async () => {
       root.render(
         <>
@@ -32,15 +32,20 @@ describe("SearchSourceBadge", () => {
       );
     });
 
-    expect(container.textContent).toContain("YouTube Music");
-    expect(container.textContent).toContain("SoundCloud");
+    const youtube = container.querySelector('[data-source-badge="youtube"]') as HTMLElement;
+    const soundcloud = container.querySelector('[data-source-badge="soundcloud"]') as HTMLElement;
+    expect(container.textContent).toBe("");
+    expect(youtube.className).toContain("text-[#ff0033]");
+    expect(soundcloud.className).toContain("text-[#ff5500]");
+    expect(youtube.className).toContain("rounded-full");
   });
 
-  it("renders safe SoundCloud attribution and stops row playback", async () => {
+  it("renders safe SoundCloud attribution and stops pointer and click row playback", async () => {
     const onRowClick = vi.fn();
+    const onRowPointerDown = vi.fn();
     await act(async () => {
       root.render(
-        <div onClick={onRowClick}>
+        <div onClick={onRowClick} onPointerDown={onRowPointerDown}>
           <SearchSourceBadge
             source="soundcloud"
             externalUrl="https://soundcloud.com/u/t"
@@ -52,7 +57,11 @@ describe("SearchSourceBadge", () => {
     const link = container.querySelector('a[aria-label="Open on SoundCloud"]') as HTMLAnchorElement;
     expect(link.target).toBe("_blank");
     expect(link.rel.split(" ")).toEqual(expect.arrayContaining(["noopener", "noreferrer"]));
-    act(() => link.click());
+    act(() => {
+      link.dispatchEvent(new MouseEvent("pointerdown", { bubbles: true }));
+      link.click();
+    });
+    expect(onRowPointerDown).not.toHaveBeenCalled();
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
@@ -65,16 +74,23 @@ describe("SearchSourceBadge", () => {
   });
 
   it("does not link an untrusted external URL", async () => {
+    const onRowClick = vi.fn();
     await act(async () => {
       root.render(
-        <SearchSourceBadge
-          source="soundcloud"
-          externalUrl="https://example.com/not-soundcloud"
-        />,
+        <div onClick={onRowClick}>
+          <SearchSourceBadge
+            source="soundcloud"
+            externalUrl="https://example.com/not-soundcloud"
+          />
+        </div>,
       );
     });
 
-    expect(container.textContent).toContain("SoundCloud");
     expect(container.querySelector("a")).toBeNull();
+    const badge = container.querySelector('[data-source-badge="soundcloud"]');
+    expect(badge?.getAttribute("aria-label")).toBe("SoundCloud");
+    expect(badge?.getAttribute("title")).toBe("SoundCloud");
+    act(() => (badge as HTMLElement).click());
+    expect(onRowClick).not.toHaveBeenCalled();
   });
 });

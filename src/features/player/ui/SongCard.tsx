@@ -35,6 +35,7 @@ export interface SongCardProps {
   onNavigate?: () => void;
   compact?: boolean;
   icon?: React.ReactNode;
+  trailingControl?: React.ReactNode;
   showReorderHandle?: boolean;
   onGrabStart?: (e: React.PointerEvent<HTMLDivElement>) => void;
   /** search query whose matches get marked in the title */
@@ -65,6 +66,7 @@ function SongCard({
   onNavigate,
   compact = false,
   icon,
+  trailingControl,
   showReorderHandle,
   onGrabStart,
   highlight,
@@ -252,6 +254,7 @@ function SongCard({
             {duration}
           </span>
         )}
+        {trailingControl}
         {menuItems && menuItems.length > 0 && (
           <DropdownMenu
             trigger={

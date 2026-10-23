@@ -16,8 +16,21 @@ vi.mock("@tanstack/react-virtual", () => ({
 }));
 
 vi.mock("@/features/player/ui/SongCardWithMenu", () => ({
-  default: ({ title, artists }: { title: string; artists: string }) => (
-    <div data-testid="song-card">{title} — {artists}</div>
+  default: ({
+    title,
+    artists,
+    className,
+    trailingControl,
+  }: {
+    title: string;
+    artists: string;
+    className?: string;
+    trailingControl?: React.ReactNode;
+  }) => (
+    <div data-testid="song-card" data-class-name={className}>
+      {title} — {artists}
+      <span data-testid="trailing-control">{trailingControl}</span>
+    </div>
   ),
 }));
 
@@ -42,7 +55,7 @@ describe("SearchResultsList source metadata", () => {
     );
   });
 
-  it("shows the provider badge and SoundCloud attribution in a result row", async () => {
+  it("places provider attribution in the card trailing controls", async () => {
     await act(async () => {
       root.render(
         <SearchResultsList
@@ -62,7 +75,10 @@ describe("SearchResultsList source metadata", () => {
       );
     });
 
-    expect(container.textContent).toContain("SoundCloud");
-    expect(container.querySelector('a[aria-label="Open on SoundCloud"]')).not.toBeNull();
+    const card = container.querySelector('[data-testid="song-card"]') as HTMLElement;
+    const trailingControl = card.querySelector('[data-testid="trailing-control"]');
+    expect(trailingControl?.querySelector('a[aria-label="Open on SoundCloud"]')).not.toBeNull();
+    expect(card.dataset.className ?? "").not.toContain("pr-[140px]");
+    expect(card.parentElement?.querySelectorAll('[data-source-badge="soundcloud"]')).toHaveLength(1);
   });
 });
