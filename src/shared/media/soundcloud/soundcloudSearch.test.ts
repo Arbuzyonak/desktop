@@ -131,6 +131,23 @@ describe("searchSoundCloud", () => {
     ]);
   });
 
+  it("reserves All results for every SoundCloud entity type", async () => {
+    installFetch({
+      "/search/tracks": Array.from({ length: 20 }, (_, index) => track(index + 1)),
+      "/search/users": [USER],
+      "/search/playlists": [set(101, true), set(102, false)],
+    });
+
+    const results = await searchSoundCloud("weeknd");
+    const resultIds = results.map(({ type, id }) => `${type}:${id}`);
+
+    expect(results).toHaveLength(13);
+    expect(resultIds).toContain("artist:sc_user_42");
+    expect(resultIds).toContain("album:sc_playlist_101");
+    expect(resultIds).toContain("playlist:sc_playlist_102");
+    expect(results.length).toBeLessThanOrEqual(20);
+  });
+
   it("forwards AbortSignal to every provider request", async () => {
     const spy = installFetch({
       "/search/tracks": [],

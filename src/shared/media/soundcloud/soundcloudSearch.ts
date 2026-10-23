@@ -64,7 +64,13 @@ export async function searchSoundCloud(
       getSearchCollection("/search/users", trimmed, signal),
       getSearchCollection("/search/playlists", trimmed, signal),
     ]);
-    results = [...mapTracks(tracks), ...mapArtists(users), ...mapSets(sets, "all")];
+    const mappedSets = mapSets(sets, "all");
+    results = [
+      ...mapTracks(tracks).slice(0, 10),
+      ...mapArtists(users).slice(0, 5),
+      ...mappedSets.filter((result) => result.type === "album").slice(0, 3),
+      ...mappedSets.filter((result) => result.type === "playlist").slice(0, 2),
+    ];
   }
 
   return uniqueResults(results).slice(0, SOUNDCLOUD_SEARCH_LIMIT);
