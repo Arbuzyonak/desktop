@@ -7,6 +7,7 @@ import { useToast } from "@/shared/ui";
 import { useTranslation } from "@/languages";
 
 import type { TrackArtist } from "@/shared/types";
+import type { CatalogSource } from "@/shared/contracts";
 
 export interface SongCardWithMenuProps {
   id?: string;
@@ -33,6 +34,8 @@ export interface SongCardWithMenuProps {
   compact?: boolean;
   icon?: React.ReactNode;
   trailingControl?: React.ReactNode;
+  source?: CatalogSource;
+  externalUrl?: string;
   showReorderHandle?: boolean;
   onGrabStart?: (e: React.PointerEvent<HTMLDivElement>) => void;
   highlight?: string;
@@ -63,10 +66,13 @@ function SongCardWithMenu({
   compact,
   icon,
   trailingControl,
+  source,
+  externalUrl,
   showReorderHandle,
   onGrabStart,
   highlight,
 }: SongCardWithMenuProps) {
+  const isTrack = searchType === undefined || searchType === "track";
   const resolvedDurationMs = useMemo(() => {
     if (durationMs !== undefined) return durationMs;
     if (!duration) return 0;
@@ -111,6 +117,8 @@ function SongCardWithMenu({
     if (trackDoubleClickBehavior === "queue") {
       playerEngine.addToQueue({
         id,
+        source,
+        externalUrl,
         title,
         artists,
         coverUrl,
@@ -126,6 +134,8 @@ function SongCardWithMenu({
   }, [
     trackDoubleClickBehavior,
     id,
+    source,
+    externalUrl,
     title,
     artists,
     coverUrl,
@@ -178,6 +188,9 @@ function SongCardWithMenu({
       compact={compact}
       icon={icon}
       trailingControl={trailingControl}
+      source={isTrack ? source : undefined}
+      externalUrl={externalUrl}
+      showSource={isTrack}
       showReorderHandle={showReorderHandle}
       onGrabStart={onGrabStart}
     />

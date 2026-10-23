@@ -20,16 +20,22 @@ vi.mock("@/features/player/ui/SongCardWithMenu", () => ({
     title,
     artists,
     className,
-    trailingControl,
+    source,
+    externalUrl,
   }: {
     title: string;
     artists: string;
     className?: string;
-    trailingControl?: React.ReactNode;
+    source?: string;
+    externalUrl?: string;
   }) => (
-    <div data-testid="song-card" data-class-name={className}>
+    <div
+      data-testid="song-card"
+      data-class-name={className}
+      data-source={source}
+      data-external-url={externalUrl}
+    >
       {title} — {artists}
-      <span data-testid="trailing-control">{trailingControl}</span>
     </div>
   ),
 }));
@@ -55,7 +61,7 @@ describe("SearchResultsList source metadata", () => {
     );
   });
 
-  it("places provider attribution in the card trailing controls", async () => {
+  it("passes provider attribution to the song card for artist-line placement", async () => {
     await act(async () => {
       root.render(
         <SearchResultsList
@@ -76,9 +82,8 @@ describe("SearchResultsList source metadata", () => {
     });
 
     const card = container.querySelector('[data-testid="song-card"]') as HTMLElement;
-    const trailingControl = card.querySelector('[data-testid="trailing-control"]');
-    expect(trailingControl?.querySelector('a[aria-label="Open on SoundCloud"]')).not.toBeNull();
+    expect(card.dataset.source).toBe("soundcloud");
+    expect(card.dataset.externalUrl).toBe("https://soundcloud.com/u/night-drive");
     expect(card.dataset.className ?? "").not.toContain("pr-[140px]");
-    expect(card.parentElement?.querySelectorAll('[data-source-badge="soundcloud"]')).toHaveLength(1);
   });
 });

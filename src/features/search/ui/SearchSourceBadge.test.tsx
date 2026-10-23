@@ -22,7 +22,7 @@ describe("SearchSourceBadge", () => {
     container.remove();
   });
 
-  it("renders compact provider-colored circles without provider-name text", async () => {
+  it("renders compact provider-colored icons without provider-name text", async () => {
     await act(async () => {
       root.render(
         <>
@@ -37,7 +37,9 @@ describe("SearchSourceBadge", () => {
     expect(container.textContent).toBe("");
     expect(youtube.className).toContain("text-[#ff0033]");
     expect(soundcloud.className).toContain("text-[#ff5500]");
-    expect(youtube.className).toContain("rounded-full");
+    expect(youtube.className).toContain("h-[16px]");
+    expect(youtube.className).toContain("w-[16px]");
+    expect(youtube.className).not.toContain("bg-[#ff0033]");
   });
 
   it("renders safe SoundCloud attribution and stops pointer and click row playback", async () => {

@@ -96,6 +96,8 @@ export const SearchHistoryList = memo(function SearchHistoryList({
                 durationMs={item.durationMs}
                 searchType={item.type}
                 totalTracks={data?.totalTracks ?? data?.total_tracks}
+                source={data?.source}
+                externalUrl={data?.externalUrl}
                 onPlay={
                   item.type === "track"
                     ? () => onPlayTrack(data)

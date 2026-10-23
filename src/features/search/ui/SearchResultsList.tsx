@@ -2,7 +2,6 @@ import { memo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import SongCardWithMenu from "@/features/player/ui/SongCardWithMenu";
 import { useTranslation } from "@/languages";
-import SearchSourceBadge from "./SearchSourceBadge";
 
 export interface SearchResultsListProps {
   items: any[];
@@ -113,9 +112,8 @@ export const SearchResultsList = memo(function SearchResultsList({
                 durationMs={durationMs}
                 searchType={it._type}
                 totalTracks={it.totalTracks ?? it.total_tracks}
-                trailingControl={it.source ? (
-                  <SearchSourceBadge source={it.source} externalUrl={it.externalUrl} />
-                ) : undefined}
+                source={it.source}
+                externalUrl={it.externalUrl}
                 onPlay={
                   it._type === "track"
                     ? () => onPlayFromSearch(it)
