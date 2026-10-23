@@ -30,6 +30,12 @@ export {
   type SearchHistoryState,
 } from "./store/searchHistoryStore";
 export {
+  AVAILABLE_SEARCH_SOURCES,
+  effectiveSearchSource,
+  useSearchSourceStore,
+  type SearchSourceState,
+} from "./store/searchSourceStore";
+export {
   SearchHistoryList,
   type SearchHistoryListProps,
 } from "./ui/SearchHistoryList";
